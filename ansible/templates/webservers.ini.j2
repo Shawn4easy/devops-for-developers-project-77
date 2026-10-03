@@ -1,0 +1,9 @@
+# {{ ansible_managed }}
+# Сгенерировано из terraform output: make ansible-inventory
+[webservers]
+{% for name, address in terraform_outputs.webservers.value | dictsort %}
+{{ name }} ansible_host={{ address }}
+{% endfor %}
+
+[webservers:vars]
+db_host={{ terraform_outputs.db_host.value }}

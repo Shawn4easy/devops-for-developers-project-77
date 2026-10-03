@@ -5,7 +5,8 @@ yc_zone: ru-central1-a
 terraform_dir: "{{ playbook_dir }}/../terraform"
 
 # Путь к своему публичному ключу. Поменяйте, если ключ называется иначе.
-admin_ssh_key_path: "{{ lookup('env', 'HOME') }}/.ssh/hexlet_devops_77.pub"
+admin_ssh_private_key_path: "{{ lookup('env', 'HOME') }}/.ssh/hexlet_devops_77"
+admin_ssh_key_path: "{{ admin_ssh_private_key_path }}.pub"
 admin_ssh_key: "{{ lookup('file', admin_ssh_key_path) }}"
 
 db_password: "{{ vault_db_password }}"

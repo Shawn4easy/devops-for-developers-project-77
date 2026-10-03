@@ -17,3 +17,131 @@
         src: secrets.backend.tfvars.j2
         dest: "{{ terraform_dir }}/secrets.backend.tfvars"
         mode: "0600"
+
+- name: Сгенерировать инвентарь из вывода Terraform
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  tags:
+    - inventory
+    - setup
+    - deploy
+
+  tasks:
+    - name: Прочитать вывод Terraform
+      ansible.builtin.command:
+        cmd: terraform -chdir={{ terraform_dir }} output -json
+      register: terraform_output
+      changed_when: false
+
+    - name: Сгенерировать инвентарь веб-серверов
+      ansible.builtin.template:
+        src: webservers.ini.j2
+        dest: "{{ playbook_dir }}/inventory/webservers.ini"
+        mode: "0644"
+      vars:
+        terraform_outputs: "{{ terraform_output.stdout | from_json }}"
+
+    - name: Перечитать инвентарь
+      ansible.builtin.meta: refresh_inventory
+
+- name: Подготовить веб-серверы
+  hosts: webservers
+  become: true
+  tags:
+    - setup
+
+  tasks:
+    # Docker ставится из репозитория Ubuntu, а не с download.docker.com: образы
+    # Yandex Cloud берут пакеты с mirror.yandex.ru, а CloudFront Docker из облака
+    # отвечает через раз.
+    - name: Установить Docker
+      ansible.builtin.apt:
+        name:
+          - docker.io
+          - python3-docker
+        state: present
+        update_cache: true
+        cache_valid_time: 3600
+
+    # Docker Hub отдаёт по DNS разные адреса, и часть из них из облака не
+    # отвечает. Образы берутся через кэш Docker Hub, при его недоступности
+    # Docker сам идёт в Docker Hub.
+    - name: Настроить зеркало Docker Hub
+      ansible.builtin.copy:
+        content: "{{ {'registry-mirrors': docker_registry_mirrors} | to_nice_json }}\n"
+        dest: /etc/docker/daemon.json
+        mode: "0644"
+      notify: Перезапустить Docker
+
+    - name: Запустить Docker
+      ansible.builtin.service:
+        name: docker
+        state: started
+        enabled: true
+
+    - name: Разрешить пользователю ubuntu работать с Docker
+      ansible.builtin.user:
+        name: "{{ ansible_user }}"
+        groups: docker
+        append: true
+
+  handlers:
+    - name: Перезапустить Docker
+      ansible.builtin.service:
+        name: docker
+        state: restarted
+
+- name: Задеплоить блог
+  hosts: webservers
+  become: true
+  # По одному серверу: приложение накатывает миграции на старте, и два
+  # одновременных запуска на пустой базе мешают друг другу. Заодно второй
+  # сервер обслуживает запросы, пока перезапускается первый.
+  serial: 1
+  tags:
+    - deploy
+
+  tasks:
+    - name: Создать директорию приложения
+      ansible.builtin.file:
+        path: "{{ blog_dir }}"
+        state: directory
+        mode: "0750"
+
+    - name: Сгенерировать файл окружения
+      ansible.builtin.template:
+        src: blog.env.j2
+        dest: "{{ blog_dir }}/.env"
+        mode: "0600"
+      register: blog_env
+
+    - name: Скачать образ блога
+      community.docker.docker_image_pull:
+        name: "{{ blog_image }}"
+        tag: "{{ blog_image_tag }}"
+      register: blog_image_pull
+      until: blog_image_pull is succeeded
+      retries: 5
+      delay: 10
+
+    - name: Запустить контейнер блога
+      community.docker.docker_container:
+        name: "{{ blog_container_name }}"
+        image: "{{ blog_image }}:{{ blog_image_tag }}"
+        pull: never
+        restart_policy: always
+        recreate: "{{ blog_env is changed }}"
+        env_file: "{{ blog_dir }}/.env"
+        published_ports:
+          - "{{ blog_port }}:8080"
+        state: started
+
+    - name: Дождаться ответа приложения
+      ansible.builtin.uri:
+        url: "http://localhost:{{ blog_port }}/"
+        status_code: 200
+      register: blog_health
+      until: blog_health.status == 200
+      retries: 30
+      delay: 2

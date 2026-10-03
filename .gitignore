@@ -8,6 +8,8 @@ secrets.backend.tfvars
 
 # Ansible
 *.retry
+.ansible/
+ansible/inventory/webservers.ini
 
 # Секреты
 .env
