@@ -98,14 +98,53 @@ cd devops-for-developers-project-77
 
 ### Секреты
 
-Terraform работает от сервисного аккаунта `terraform-sa` с ролью `editor` на каталог.
-State хранится в бакете Object Storage `shawn4easy-hexlet-77-tfstate`. Сервисный аккаунт
-и бакет создаются один раз вручную через `yc`: они нужны самому Terraform для работы.
+Terraform работает от сервисного аккаунта `terraform-sa`, state хранится в бакете
+Object Storage `shawn4easy-hexlet-77-tfstate`. Аккаунт и бакет нужны самому Terraform,
+поэтому создаются один раз командами `yc` до первого запуска:
 
-Ключи хранятся в зашифрованном файле `ansible/group_vars/all/vault.yml`. Состав
-переменных — в образце `ansible/group_vars/all/vault.yml.example`. Пароль от vault
-лежит в `~/.config/hexlet-devops-77/vault_pass`. `Makefile` передаёт его Ansible через
-`ANSIBLE_VAULT_PASSWORD_FILE`, другой путь задаётся так: `make VAULT_PASSWORD_FILE=<путь> <цель>`.
+```bash
+FOLDER_ID=$(yc config get folder-id)
+
+yc iam service-account create --name terraform-sa
+for role in editor certificate-manager.certificates.downloader; do
+  yc resource-manager folder add-access-binding "$FOLDER_ID" \
+    --role "$role" --service-account-name terraform-sa
+done
+
+yc iam key create --service-account-name terraform-sa --output sa-key.json
+yc iam access-key create --service-account-name terraform-sa   # ключи для backend
+
+yc storage bucket create --name shawn4easy-hexlet-77-tfstate --max-size 1073741824
+yc storage bucket update --name shawn4easy-hexlet-77-tfstate --versioning versioning-enabled
+```
+
+Роль `certificate-manager.certificates.downloader` нужна балансировщику: без неё он не
+может подключить сертификат Let's Encrypt. Имя бакета уникально для всего Object
+Storage, при развёртывании у себя поменяйте его в `terraform/backend.tf`.
+
+Ключи DataDog берутся в Organization Settings: API Keys для агента и Application Keys
+для Terraform.
+
+Все ключи хранятся в зашифрованном файле `ansible/group_vars/all/vault.yml`. Состав
+переменных и откуда их взять — в образце `ansible/group_vars/all/vault.yml.example`.
+Пароль от vault лежит вне репозитория, в `~/.config/hexlet-devops-77/vault_pass`.
+`Makefile` передаёт его Ansible через `ANSIBLE_VAULT_PASSWORD_FILE`, другой путь
+задаётся так: `make VAULT_PASSWORD_FILE=<путь> <цель>`.
+
+Создать vault с нуля:
+
+```bash
+mkdir -p ~/.config/hexlet-devops-77 && chmod 700 ~/.config/hexlet-devops-77
+openssl rand -hex 32 > ~/.config/hexlet-devops-77/vault_pass
+chmod 600 ~/.config/hexlet-devops-77/vault_pass
+
+cp ansible/group_vars/all/vault.yml.example ansible/group_vars/all/vault.yml
+# заполнить значения, затем зашифровать
+ansible-vault encrypt ansible/group_vars/all/vault.yml \
+  --vault-password-file ~/.config/hexlet-devops-77/vault_pass
+```
+
+Работа с готовым vault:
 
 ```bash
 make vault-view   # посмотреть секреты

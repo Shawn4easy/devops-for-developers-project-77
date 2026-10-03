@@ -5,6 +5,7 @@
 crash.log
 secrets.auto.tfvars
 secrets.backend.tfvars
+*.tfplan
 
 # Ansible
 *.retry
@@ -12,6 +13,8 @@ secrets.backend.tfvars
 ansible/inventory/webservers.ini
 
 # Секреты
+vault_pass
+.vault_pass
 .env
 .env.*
 *.pem
