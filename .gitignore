@@ -1,0 +1,24 @@
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+secrets.auto.tfvars
+secrets.backend.tfvars
+
+# Ansible
+*.retry
+
+# Секреты
+.env
+.env.*
+*.pem
+*.key
+id_rsa*
+id_ed25519*
+
+# IDE
+.idea/
+.vscode/
+
+.DS_Store

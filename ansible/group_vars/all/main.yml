@@ -1,0 +1,5 @@
+yc_cloud_id: b1g8d21ht8tnhginscoj
+yc_folder_id: b1gqe0ri9gmoiu100mip
+yc_zone: ru-central1-a
+
+terraform_dir: "{{ playbook_dir }}/../terraform"

@@ -1,0 +1,16 @@
+- name: Сгенерировать файлы переменных Terraform
+  hosts: localhost
+  gather_facts: false
+
+  tasks:
+    - name: Сгенерировать переменные провайдера
+      ansible.builtin.template:
+        src: secrets.auto.tfvars.j2
+        dest: "{{ terraform_dir }}/secrets.auto.tfvars"
+        mode: "0600"
+
+    - name: Сгенерировать настройки backend
+      ansible.builtin.template:
+        src: secrets.backend.tfvars.j2
+        dest: "{{ terraform_dir }}/secrets.backend.tfvars"
+        mode: "0600"

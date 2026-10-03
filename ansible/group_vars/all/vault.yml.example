@@ -1,0 +1,11 @@
+# Образец. Настоящий файл зашифрован: ansible-vault edit group_vars/all/vault.yml
+
+# Авторизованный ключ сервисного аккаунта terraform-sa:
+# yc iam key create --service-account-name terraform-sa --output sa-key.json
+vault_yc_service_account_key: |
+  {"id": "...", "service_account_id": "...", "private_key": "..."}
+
+# Статический ключ доступа к Object Storage для backend:
+# yc iam access-key create --service-account-name terraform-sa
+vault_s3_access_key: "..."
+vault_s3_secret_key: "..."
