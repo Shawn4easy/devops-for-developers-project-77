@@ -79,7 +79,7 @@ variable "vm_disk_size" {
 variable "app_port" {
   description = "Порт приложения на веб-серверах"
   type        = number
-  default     = 3000
+  default     = 8080
 }
 
 variable "db_name" {

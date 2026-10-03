@@ -17,6 +17,11 @@
 
 Приложение доступно по адресу **https://shawn4easy.ru**.
 
+Разворачивается блог на Fastify из проекта
+[devops-for-programmers-project-lvl1](https://github.com/Shawn4easy/devops-for-programmers-project-lvl1),
+образ [`shawn4easy/devops-for-programmers-project-lvl1`](https://hub.docker.com/r/shawn4easy/devops-for-programmers-project-lvl1).
+Данные хранятся в Managed PostgreSQL.
+
 ```
      shawn4easy.ru :80 → :443
                 │
