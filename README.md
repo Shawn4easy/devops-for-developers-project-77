@@ -12,6 +12,7 @@
 - Terraform — описание инфраструктуры в Yandex Cloud
 - Ansible — генерация переменных Terraform из зашифрованного хранилища секретов
 - Yandex Cloud — облачный провайдер, Object Storage для хранения state
+- DataDog — мониторинг доступности приложения на каждом сервере
 
 ## Инфраструктура
 
@@ -49,6 +50,7 @@
 | `alb.tf` | L7-балансировщик: HTTPS-обработчик и редирект с HTTP |
 | `certificate.tf` | managed-сертификат Let's Encrypt и записи для его проверки |
 | `dns.tf` | DNS-зона домена и A-записи на балансировщик |
+| `monitoring.tf` | монитор DataDog, который следит за приложением на каждом сервере |
 | `outputs.tf` | адреса серверов, балансировщика и базы |
 
 Домен `shawn4easy.ru` зарегистрирован в reg.ru и делегирован на
@@ -111,8 +113,8 @@ make vault-edit   # изменить секреты
 Terraform секреты не расшифровывает. Ansible рендерит из vault два файла, которые
 не попадают в репозиторий:
 
-- `terraform/secrets.auto.tfvars` — ключ сервисного аккаунта и параметры облака,
-  Terraform подхватывает его сам
+- `terraform/secrets.auto.tfvars` — ключ сервисного аккаунта, параметры облака и
+  ключи DataDog, Terraform подхватывает его сам
 - `terraform/secrets.backend.tfvars` — ключи доступа к бакету со state, передаются
   через `terraform init -backend-config`: блок `backend` не принимает переменные
 
@@ -138,7 +140,8 @@ make tf-output  # адреса серверов, балансировщика и
 
 ```bash
 make deploy          # подготовить серверы и задеплоить блог
-make ansible-setup   # только подготовка: Docker и зеркало Docker Hub
+make ansible-setup   # только подготовка: Docker, зеркало Docker Hub и агент DataDog
+make ansible-monitoring # только агент DataDog
 make ansible-deploy  # только деплой приложения
 make ansible-inventory # перегенерировать инвентарь
 ```
@@ -149,7 +152,8 @@ make ansible-inventory # перегенерировать инвентарь
 |---|---|
 | `terraform` | рендерит файлы переменных Terraform из vault |
 | `inventory` | читает `terraform output` и генерирует `ansible/inventory/webservers.ini` |
-| `setup` | ставит Docker из репозитория Ubuntu и настраивает зеркало Docker Hub |
+| `setup` | ставит Docker из репозитория Ubuntu, настраивает зеркало Docker Hub и ставит агент DataDog |
+| `monitoring` | ставит агент DataDog и проверку `http_check` |
 | `deploy` | раскладывает файл окружения и запускает контейнер блога |
 
 Инвентарь веб-серверов в репозиторий не попадает: адреса машин и хост базы берутся
@@ -162,10 +166,33 @@ make ansible-inventory # перегенерировать инвентарь
 Пока на веб-серверах не запущено приложение, балансировщик не принимает соединения:
 узлы ALB не открывают слушатели без хотя бы одного здорового бэкенда.
 
+### Мониторинг
+
+Агент DataDog 7 ставится на веб-серверы коллекцией `datadog.dd`. Организация заведена
+в регионе `datadoghq.eu`, он задан переменной `datadog_site` в
+`ansible/group_vars/all/main.yml`. Ключ API нужен агенту, ключ приложения — Terraform
+для управления монитором, оба лежат в vault.
+
+Агент каждые 15 секунд запрашивает `http://localhost:8080/` на своём сервере
+(`http_check`, экземпляр `blog`). Монитор `datadog_monitor.blog_http` из
+`terraform/monitoring.tf` следит за `http.can_connect` отдельно по каждому серверу и
+поднимает тревогу, если две из трёх последних проверок неудачны. Если агент перестал
+присылать данные дольше 5 минут, монитор тоже поднимает тревогу.
+
+Проверить агент на серверах:
+
+```bash
+cd ansible && ansible webservers -b -m command -a 'datadog-agent status'
+```
+
+Роль скачивает APT-ключи DataDog с `s3.amazonaws.com` без повторов, а связь с AWS
+из облака бывает нестабильной. Плейбук скачивает ключи заранее с повторами, роль
+берёт их из локальных файлов.
+
 ### Если сервер не может скачать пакеты
 
 Часть публичных адресов Yandex Cloud попадает под фильтрацию: с них не открываются
-`download.docker.com`, `github.com` и Docker Hub. Блокировка идёт по адресу источника,
+`download.docker.com`, `github.com`, Docker Hub и репозитории DataDog на AWS. Блокировка идёт по адресу источника,
 и лечится перезапуском машины — она получает новый адрес:
 
 ```bash

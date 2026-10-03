@@ -12,3 +12,8 @@ vault_s3_secret_key: "..."
 
 # Пароль пользователя базы данных: openssl rand -hex 24
 vault_db_password: "..."
+
+# DataDog: Organization Settings → API Keys и Application Keys.
+# Ключ API нужен агенту, ключ приложения — Terraform для создания монитора.
+vault_datadog_api_key: "..."
+vault_datadog_app_key: "..."

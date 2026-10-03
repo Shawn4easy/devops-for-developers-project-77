@@ -10,3 +10,8 @@ admin_ssh_key_path: "{{ admin_ssh_private_key_path }}.pub"
 admin_ssh_key: "{{ lookup('file', admin_ssh_key_path) }}"
 
 db_password: "{{ vault_db_password }}"
+
+# Регион организации DataDog, не секрет. Нужен и агенту, и Terraform.
+datadog_site: datadoghq.eu
+datadog_api_key: "{{ vault_datadog_api_key }}"
+datadog_app_key: "{{ vault_datadog_app_key }}"

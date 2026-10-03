@@ -1,4 +1,4 @@
-.PHONY: setup ansible-install ansible-inventory ansible-setup ansible-deploy deploy tf-vars tf-init tf-plan tf-apply tf-destroy tf-output vault-edit vault-view
+.PHONY: setup ansible-install ansible-inventory ansible-setup ansible-monitoring ansible-deploy deploy tf-vars tf-init tf-plan tf-apply tf-destroy tf-output vault-edit vault-view
 
 # Пароль от Ansible Vault. Переопределяется: make VAULT_PASSWORD_FILE=... <цель>
 VAULT_PASSWORD_FILE ?= $(HOME)/.config/hexlet-devops-77/vault_pass
@@ -39,6 +39,9 @@ ansible-inventory:
 
 ansible-setup:
 	cd ansible && ansible-playbook playbook.yml --tags setup
+
+ansible-monitoring:
+	cd ansible && ansible-playbook playbook.yml --tags monitoring
 
 ansible-deploy:
 	cd ansible && ansible-playbook playbook.yml --tags deploy

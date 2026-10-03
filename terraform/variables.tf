@@ -111,3 +111,27 @@ variable "db_disk_size" {
   type        = number
   default     = 10
 }
+
+variable "datadog_api_key" {
+  description = "Ключ API DataDog"
+  type        = string
+  sensitive   = true
+}
+
+variable "datadog_app_key" {
+  description = "Ключ приложения DataDog, нужен для управления мониторами"
+  type        = string
+  sensitive   = true
+}
+
+variable "datadog_api_url" {
+  description = "Адрес API DataDog для региона организации"
+  type        = string
+  default     = "https://api.datadoghq.eu/"
+}
+
+variable "datadog_check_name" {
+  description = "Имя экземпляра http_check агента, по которому работает монитор"
+  type        = string
+  default     = "blog"
+}

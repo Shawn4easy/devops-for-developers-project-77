@@ -25,6 +25,7 @@
   tags:
     - inventory
     - setup
+    - monitoring
     - deploy
 
   tasks:
@@ -91,6 +92,36 @@
       ansible.builtin.service:
         name: docker
         state: restarted
+
+- name: Установить агент DataDog
+  hosts: webservers
+  become: true
+  tags:
+    - setup
+    - monitoring
+
+  pre_tasks:
+    - name: Создать директорию ключей DataDog
+      ansible.builtin.file:
+        path: "{{ datadog_apt_keys_dir }}"
+        state: directory
+        mode: "0755"
+
+    - name: Скачать APT-ключи DataDog
+      ansible.builtin.get_url:
+        url: "{{ datadog_apt_key_base_url }}/{{ item.value | basename }}"
+        dest: "{{ item.value | regex_replace('^file://', '') }}"
+        mode: "0644"
+      loop: "{{ datadog_apt_default_keys }}"
+      loop_control:
+        label: "{{ item.value | basename }}"
+      register: datadog_apt_keys
+      until: datadog_apt_keys is succeeded
+      retries: 5
+      delay: 10
+
+  roles:
+    - role: datadog.dd.agent
 
 - name: Задеплоить блог
   hosts: webservers
