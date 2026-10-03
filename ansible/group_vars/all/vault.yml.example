@@ -9,3 +9,6 @@ vault_yc_service_account_key: |
 # yc iam access-key create --service-account-name terraform-sa
 vault_s3_access_key: "..."
 vault_s3_secret_key: "..."
+
+# Пароль пользователя базы данных: openssl rand -hex 24
+vault_db_password: "..."

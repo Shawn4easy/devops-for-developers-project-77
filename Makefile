@@ -1,7 +1,17 @@
-.PHONY: tf-vars tf-init tf-plan tf-apply tf-destroy vault-edit vault-view
+.PHONY: setup ansible-install tf-vars tf-init tf-plan tf-apply tf-destroy tf-output vault-edit vault-view
+
+# Пароль от Ansible Vault. Переопределяется: make VAULT_PASSWORD_FILE=... <цель>
+VAULT_PASSWORD_FILE ?= $(HOME)/.config/hexlet-devops-77/vault_pass
+export ANSIBLE_VAULT_PASSWORD_FILE = $(VAULT_PASSWORD_FILE)
+
+setup: ansible-install tf-init
+
+ansible-install:
+	cd ansible && ansible-galaxy collection install -r requirements.yml
+	cd ansible && ansible-galaxy role install -r requirements.yml
 
 tf-vars:
-	cd ansible && ansible-playbook terraform.yml
+	cd ansible && ansible-playbook playbook.yml --tags terraform
 
 tf-init: tf-vars
 	terraform -chdir=terraform init -backend-config=secrets.backend.tfvars
@@ -14,6 +24,9 @@ tf-apply: tf-vars
 
 tf-destroy: tf-vars
 	terraform -chdir=terraform destroy
+
+tf-output:
+	terraform -chdir=terraform output
 
 vault-edit:
 	cd ansible && ansible-vault edit group_vars/all/vault.yml

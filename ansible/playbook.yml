@@ -1,9 +1,12 @@
 - name: Сгенерировать файлы переменных Terraform
   hosts: localhost
+  connection: local
   gather_facts: false
+  tags:
+    - terraform
 
   tasks:
-    - name: Сгенерировать переменные провайдера
+    - name: Сгенерировать переменные Terraform
       ansible.builtin.template:
         src: secrets.auto.tfvars.j2
         dest: "{{ terraform_dir }}/secrets.auto.tfvars"
